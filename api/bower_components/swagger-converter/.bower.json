@@ -1,0 +1,30 @@
+{
+  "name": "swagger-converter",
+  "main": "index.js",
+  "version": "0.1.0",
+  "homepage": "https://github.com/apigee-127/swagger-converter",
+  "authors": [
+    "Mohsen Azimi <msn.azi@gmail.com>"
+  ],
+  "description": "Swagger document converter (from 1.2 to 2.0 version)",
+  "keywords": [
+    "Swagger"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "_release": "0.1.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.1.0",
+    "commit": "3bff89f76367751df8aaae675e55e334a2be7603"
+  },
+  "_source": "git://github.com/apigee-127/swagger-converter.git",
+  "_target": "~0.1.0",
+  "_originalSource": "swagger-converter"
+}
