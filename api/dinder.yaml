@@ -1,0 +1,321 @@
+# this is an example of the Uber API
+# as a demonstration of an API spec in YAML
+swagger: '2.0'
+info:
+  title: Dinder API
+  description: Tinder for dinner
+  version: "0.1.0"
+# the domain of the service
+host: api.dinder.us
+# array of all schemes that your API supports
+schemes:
+  - https
+# will be prefixed to all paths
+basePath: /v1
+produces:
+  - application/json
+paths:
+  /user:
+    get:
+      summary: Fetch logged-in user
+      description: |
+        Provides the user object for the user that's currently logged in. If no user
+        is logged in, return an error.
+      tags:
+        - User
+      responses:
+        200:
+          description: The user object for the logged in user
+          schema:
+            $ref: '#/definitions/User'
+        400:
+          description: No user is logged in
+          schema: 
+            $ref: '#/definitions/Error'
+        500:
+          description: Error retrieving user information or checking logged in status
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: Create new user
+      description: |
+        Create a new user that can be perform all other user-related actions.
+        Note that the user is *not* logged in after this call.
+      parameters:
+        - name: name
+          in: query
+          type: string
+          description: the visible name of the user
+          required: true
+        - name: email
+          in: query
+          type: string
+          description: a valid email address for the user
+          required: true
+      responses:
+        200:
+          description: Successfully created user.
+        500:
+          description: Error creating user.
+          schema:
+            $ref: "#/definitions/Error"
+      tags:
+        - User
+  /user/login:
+    post:
+      summary: Log in a user
+      description: |
+        Log a user in and retrieve information about the user as well as
+        a session-specific token that can be used for validating the user
+        in future requests. Note that authentication is currently taking
+        place on the client side via a third-party authentication service
+        so this call is not intended to handle authentication itself.
+      parameters:
+        - name: email
+          in: query
+          description: |
+            The email address of the user, which should already be registered
+            to a user in the system.
+          required: true
+          type: string
+      tags:
+        - User
+      responses:
+        200:
+          description: Successfully logged user in.
+        500:
+          description: Error logging user in.
+          schema:
+            $ref: "#/definitions/Error"
+  /groups:
+    get:
+      summary: Get list of all groups for user
+      description: |
+        Get a list of all groups that the user is a member of.
+      tags:
+        - Group
+      responses:
+        200:
+          description: List of groups the user belongs to.
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Group"
+    post:
+      summary: Create a new group
+      description: |
+        Create a new group with the specified members.
+      tags:
+        - Group
+      parameters:
+        - name: name
+          in: query
+          type: string
+          required: true
+          description: The name of the new group.
+        - name: creator
+          in: query
+          required: false
+          description: |
+            User ID's of the group creator, who will automatically be enrolled
+            as a member. If not provided then the group is created without any 
+            members.
+          type: integer
+      responses:
+        200:
+          description: Newly created group.
+          schema:
+            $ref: "#/definitions/Group"
+        500:
+          description: Error encountered while creating group.
+          schema:
+            $ref: "#/definitions/Error"
+  /groups/add:
+    post:
+      summary: Add a new user to a group
+      description: |
+        Add the specified user to the specified group.
+      parameters:
+        - name: user_id
+          in: query
+          type: integer
+          required: true
+          description: The user ID of the user to be added.
+        - name: group_id
+          in: query
+          type: integer
+          required: true
+          description: The group ID that the user should be added to.
+      responses:
+        200:
+          description: The modified group object.
+          schema:
+            $ref: "#/definitions/Group"
+        500:
+          description: The error encountered while trying to add the user.
+          schema:
+            $ref: "#/definitions/Error"
+      tags: 
+        - Group
+  /meal:
+    get:
+      summary: Fetch the current meal
+      description: |
+        Fetch the current meal for the group, or no meal if it hasn't been
+        decided yet.
+      parameters:
+        - name: group_id
+          in: query
+          type: integer
+          required: true
+          description: The group the meal has been selected for.
+      responses:
+        200:
+          description: The requested meal.
+          schema:
+            $ref: "#/definitions/Meal"
+        400:
+          description: No meals has been agreed upon yet.
+        500:
+          description: The error encountered while trying to fetch the meal.
+          schema:
+            $ref: "#/definitions/Error"
+      tags:
+        - Meal
+  /meal/status:
+    post:
+      summary: Set the user's status for the current meal
+      description: |
+        Set the user's status for the current meal in the current
+        group. Note that there's currently no way to set this
+        for future meals.
+      tags:
+        - Meal
+      responses:
+        200:
+          description: Successfully set status
+        500:
+          description: Error setting status
+          schema:
+            $ref: "#/definitions/Error"
+  /recipes:
+    get:
+      summary: Get a list of recommended recipes for the user 
+      description: |
+        Fetch a list of recipes for a given user in a given group. The backend will
+        return these in ranked order based on a variety of different signals (probability
+        of liking a given recipe, how many other group members have voted on them, etc).
+      responses:
+        200:
+          description: A set of recipes that can be voted on by the user.
+          schema:
+            type: array
+            schema:
+              $ref: "#/definitions/Recipe"
+        500:
+          description: The error encountered while trying to fetch recipes.
+          schema:
+            $ref: "#/definitions/Error"
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          type: integer
+          description: The user who will be voting on the recipes.
+        - name: group_id
+          in: query
+          required: true
+          type: integer
+          description: The group that is accumulating votes on the requested recipes.
+        - name: count
+          in: query
+          required: false
+          type: integer
+          description: |
+            The number of recipes to return. If not specified, five recipes will be
+            provided.
+      tags:
+        - Recipe
+  /vote:
+    post:
+      summary: Register a vote for a given recipe.
+      description: |
+        Specify the user's vote for a given recipe. This is recorded and special
+        feedback is provided when all members of the vote have voted positively
+        for a single recipe.
+      parameters:
+        - name: recipe_id
+          in: query
+          type: integer
+          required: true
+          description: The ID of the recipe being voted on.
+        - name: user_id
+          in: query
+          type: integer
+          required: true
+          description: The user doing the voting.
+        - name: group_id
+          in: query
+          type: integer
+          required: true
+          description: The group that the user is placing the vote in.
+        - name: vote
+          in: query
+          type: integer
+          required: true
+          description: TRUE if approved, FALSE if rejected. 
+      responses:
+        200:
+          description: The vote was successfully recorded.
+        500:
+          description: The error encountered while recording the vote.
+          schema:
+            $ref: "#/definitions/Error"
+      tags:
+        - Recipe
+  
+definitions:
+  User:
+    properties:
+      user_id:
+        type: integer
+        description: |
+           A unique ID identifying the user.
+      name:
+        type: string
+        description: |
+          The visible name of the user used to identify them in the
+          frontend.
+      email_address:
+        type: string
+        description: |
+          The email address of the user, used for adding known contacts
+          and communicating with the user.
+  Group:
+    properties:
+      group_id:
+        type: integer
+        description: |
+          A set of users. Meals are chosen (and recommendations for meals
+          are given) at a group level.
+  Meal:
+    properties:
+      meal_id:
+        type: integer
+        description: Unique identifier for the meal.
+      group_id:
+        type: integer
+        description: The group that the meal was chosen for.
+  Recipe:
+    properties:
+      recipe_id:
+        type: integer
+        description: Unique identifier for the meal.
+  Error:
+    properties:
+      code:
+        type: integer
+        description: Identifier for the type of error that occurred.
+      message:
+        type: string
+        description: A user-facing string describing the error.
