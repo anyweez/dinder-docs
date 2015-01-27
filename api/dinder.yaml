@@ -130,7 +130,7 @@ paths:
           description: Error encountered while creating group.
           schema:
             $ref: "#/definitions/Error"
-  /groups/add:
+  /group/add_user:
     post:
       summary: Add a new user to a group
       description: |
@@ -161,8 +161,10 @@ paths:
     get:
       summary: Fetch the current meal
       description: |
-        Fetch the current meal for the group, or no meal if it hasn't been
-        decided yet.
+        Fetch the current meal (if set) and vote status for the group, or no meal 
+        if it hasn't been decided yet.
+      tags:
+        - Meal
       parameters:
         - name: group_id
           in: query
@@ -175,13 +177,13 @@ paths:
           schema:
             $ref: "#/definitions/Meal"
         400:
-          description: No meals has been agreed upon yet.
+          description: No meals has been agreed upon yet; vote statuses will be set.
+          schema:
+            $ref: "#/definitions/Meal"
         500:
           description: The error encountered while trying to fetch the meal.
           schema:
             $ref: "#/definitions/Error"
-      tags:
-        - Meal
   /meal/status:
     post:
       summary: Set the user's status for the current meal
@@ -191,6 +193,17 @@ paths:
         for future meals.
       tags:
         - Meal
+      parameters:
+        - name: user_id
+          in: query
+          type: integer
+          required: true
+          description: the ID of the user that's setting their status
+        - name: group_id
+          in: query
+          type: integer
+          required: true
+          description: the group that the user's status is being set for
       responses:
         200:
           description: Successfully set status
@@ -261,7 +274,7 @@ paths:
           description: The group that the user is placing the vote in.
         - name: vote
           in: query
-          type: integer
+          type: boolean
           required: true
           description: TRUE if approved, FALSE if rejected. 
       responses:
@@ -275,6 +288,7 @@ paths:
         - Recipe
   
 definitions:
+  
   User:
     properties:
       user_id:
@@ -291,6 +305,7 @@ definitions:
         description: |
           The email address of the user, used for adding known contacts
           and communicating with the user.
+  
   Group:
     properties:
       group_id:
@@ -298,6 +313,11 @@ definitions:
         description: |
           A set of users. Meals are chosen (and recommendations for meals
           are given) at a group level.
+      name:
+        type: string
+        description: |
+          The visible name of the group.
+  
   Meal:
     properties:
       meal_id:
@@ -306,11 +326,57 @@ definitions:
       group_id:
         type: integer
         description: The group that the meal was chosen for.
+      recipe:
+        schema:
+          $ref: "#/definitions/Recipe"
+        description: |
+          The chosen recipe, if available.
+      votes:
+        type: array
+        items:
+          $ref: "#/definitions/Vote"
+  
   Recipe:
     properties:
       recipe_id:
         type: integer
         description: Unique identifier for the meal.
+      name:
+        type: string
+        description: The visible name of the recipe
+      image_urls:
+        type: array
+        description: URL's to images of the recipe
+        items:
+          type: string
+      time:
+        type: array
+        description: The amount of time required to complete each phase of the meal
+        items:
+          - name: prep
+            type: integer
+            description: preparation time
+          - name: cook
+            type: integer
+            description: cook time
+          - name: ready
+            type: integer
+            description: total time required
+      ingredients:
+        type: array
+        description: The ingredients included in the recipe.
+        items:
+          $ref: "#/definitions/Ingredient"
+  
+  Ingredient:
+    properties:
+      quantity_str:
+        type: string
+        description: String describing the quantity of ingredient required (i.e. "1 cup")
+      name_str:
+        type: string
+        description: String describing the type of ingredient required (i.e. "split pea soup")
+        
   Error:
     properties:
       code:
@@ -319,3 +385,18 @@ definitions:
       message:
         type: string
         description: A user-facing string describing the error.
+        
+  Vote:
+    properties:
+      user_id: 
+        type: integer
+        description: the voting user
+      group_id:
+        type: integer
+        description: the group the vote applies to
+      recipe_id:
+        type: integer
+        description: the recipe the vote applies to
+      vote:
+        type: boolean
+        description: TRUE for accept, FALSE for reject
