@@ -171,8 +171,8 @@ paths:
     get:
       summary: Fetch the current meal
       description: |
-        Fetch the current meal (if set) and vote status for the group, or no meal 
-        if it hasn't been decided yet.
+        Fetch the current meal. If a recipe hasn't been chosen yet, the recipe
+        field will be set to null. Votes and availability will still be present.
       tags:
         - Meal
         - Login Required
@@ -185,10 +185,6 @@ paths:
       responses:
         200:
           description: The requested meal.
-          schema:
-            $ref: "#/definitions/Meal"
-        400:
-          description: No meals has been agreed upon yet; vote statuses will be set.
           schema:
             $ref: "#/definitions/Meal"
         401:
