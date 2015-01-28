@@ -15,7 +15,56 @@ basePath: /v1
 produces:
   - application/json
 paths:
-  /user:
+  /users:
+    post:
+      summary: Create new user
+      description: |
+        Create a new user that can be perform all other user-related actions.
+        Note that the user is *not* logged in after this call.
+      parameters:
+        - name: user
+          in: body
+          description: A user object. The value in the user_id field will be ignored.
+          required: true
+          schema:
+            $ref: '#/definitions/User'
+      responses:
+        200:
+          description: Successfully created user.
+        500:
+          description: Error creating user.
+          schema:
+            $ref: "#/definitions/Error"
+      tags:
+        - User
+  /users/login:
+    post:
+      summary: Log in a user
+      description: |
+        Log a user in and retrieve information about the user as well as
+        a session-specific token that can be used for validating the user
+        in future requests. Note that authentication is currently taking
+        place on the client side via a third-party authentication service
+        so this call is not intended to handle authentication itself.
+      parameters:
+        - name: email
+          in: body
+          description: |
+            The email address of the user, which should already be registered
+            to a user in the system.
+          required: true
+          schema:
+            type: string
+      tags:
+        - User
+      responses:
+        200:
+          description: Successfully logged user in.
+        500:
+          description: Error logging user in.
+          schema:
+            $ref: "#/definitions/Error"
+  /users/me:
     get:
       summary: Fetch logged-in user
       description: |
@@ -28,7 +77,7 @@ paths:
           description: The user object for the logged in user
           schema:
             $ref: '#/definitions/User'
-        400:
+        404:
           description: No user is logged in
           schema: 
             $ref: '#/definitions/Error'
@@ -36,57 +85,6 @@ paths:
           description: Error retrieving user information or checking logged in status
           schema:
             $ref: '#/definitions/Error'
-    post:
-      summary: Create new user
-      description: |
-        Create a new user that can be perform all other user-related actions.
-        Note that the user is *not* logged in after this call.
-      parameters:
-        - name: name
-          in: query
-          type: string
-          description: the visible name of the user
-          required: true
-        - name: email
-          in: query
-          type: string
-          description: a valid email address for the user
-          required: true
-      responses:
-        200:
-          description: Successfully created user.
-        500:
-          description: Error creating user.
-          schema:
-            $ref: "#/definitions/Error"
-      tags:
-        - User
-  /user/login:
-    post:
-      summary: Log in a user
-      description: |
-        Log a user in and retrieve information about the user as well as
-        a session-specific token that can be used for validating the user
-        in future requests. Note that authentication is currently taking
-        place on the client side via a third-party authentication service
-        so this call is not intended to handle authentication itself.
-      parameters:
-        - name: email
-          in: query
-          description: |
-            The email address of the user, which should already be registered
-            to a user in the system.
-          required: true
-          type: string
-      tags:
-        - User
-      responses:
-        200:
-          description: Successfully logged user in.
-        500:
-          description: Error logging user in.
-          schema:
-            $ref: "#/definitions/Error"
   /groups:
     get:
       summary: Get list of all groups for user
@@ -94,6 +92,7 @@ paths:
         Get a list of all groups that the user is a member of.
       tags:
         - Group
+        - Login Required
       responses:
         200:
           description: List of groups the user belongs to.
@@ -101,48 +100,54 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Group"
+        401:
+          description: No user is logged in.
+          schema:
+            $ref: '#/definitions/Error'
     post:
       summary: Create a new group
       description: |
         Create a new group with the specified members.
       tags:
         - Group
+        - Login Required
       parameters:
-        - name: name
-          in: query
-          type: string
-          required: true
-          description: The name of the new group.
-        - name: creator
-          in: query
-          required: false
+        - name: group
+          in: body
           description: |
-            User ID's of the group creator, who will automatically be enrolled
-            as a member. If not provided then the group is created without any 
+            A new group that should be created. The group_id field will be ignored.
+            Any user ID's provided in the object will be automatically be enrolled
+            as a member. If none are provided then the group is created without any 
             members.
-          type: integer
+          schema:
+            $ref: '#/definitions/Group'
       responses:
         200:
           description: Newly created group.
           schema:
             $ref: "#/definitions/Group"
+        401:
+          description: No user is logged in.
+          schema:
+            $ref: '#/definitions/Error'
         500:
           description: Error encountered while creating group.
           schema:
             $ref: "#/definitions/Error"
-  /group/add_user:
+  /groups/{group_id}/user:
     post:
       summary: Add a new user to a group
       description: |
         Add the specified user to the specified group.
       parameters:
-        - name: user_id
-          in: query
-          type: integer
+        - name: user_email
+          in: body
+          schema:
+            type: string
           required: true
-          description: The user ID of the user to be added.
+          description: The registered email address of the user to be added.
         - name: group_id
-          in: query
+          in: path
           type: integer
           required: true
           description: The group ID that the user should be added to.
@@ -151,13 +156,18 @@ paths:
           description: The modified group object.
           schema:
             $ref: "#/definitions/Group"
+        401:
+          description: No user is logged in.
+          schema:
+            $ref: '#/definitions/Error'
         500:
           description: The error encountered while trying to add the user.
           schema:
             $ref: "#/definitions/Error"
       tags: 
         - Group
-  /meal:
+        - Login Required
+  /meals/today:
     get:
       summary: Fetch the current meal
       description: |
@@ -165,6 +175,7 @@ paths:
         if it hasn't been decided yet.
       tags:
         - Meal
+        - Login Required
       parameters:
         - name: group_id
           in: query
@@ -180,11 +191,15 @@ paths:
           description: No meals has been agreed upon yet; vote statuses will be set.
           schema:
             $ref: "#/definitions/Meal"
+        401:
+          description: No user is logged in.
+          schema:
+            $ref: '#/definitions/Error'
         500:
           description: The error encountered while trying to fetch the meal.
           schema:
             $ref: "#/definitions/Error"
-  /meal/status:
+  /meals/today/status:
     post:
       summary: Set the user's status for the current meal
       description: |
@@ -193,24 +208,57 @@ paths:
         for future meals.
       tags:
         - Meal
+        - Login Required
       parameters:
-        - name: user_id
-          in: query
-          type: integer
-          required: true
-          description: the ID of the user that's setting their status
         - name: group_id
           in: query
           type: integer
           required: true
           description: the group that the user's status is being set for
+        - name: available
+          in: query
+          type: boolean
+          required: false
+          description: TRUE if the user is voting (default) or FALSE if they're abstaining
       responses:
         200:
           description: Successfully set status
+        401:
+          description: No user is logged in.
+          schema:
+            $ref: '#/definitions/Error'
         500:
           description: Error setting status
           schema:
             $ref: "#/definitions/Error"
+  /meals/vote:
+    post:
+      summary: Register a vote for a given recipe.
+      description: |
+        Specify the user's vote for a given recipe. This is recorded and special
+        feedback is provided when all members of the vote have voted positively
+        for a single recipe.
+      parameters:
+        - name: vote
+          in: body
+          description: |
+            Information about the vote being cast. The user_id will be ignored.
+          schema:
+            $ref: '#/definitions/Vote'
+      responses:
+        200:
+          description: The vote was successfully recorded.
+        401:
+          description: No user is logged in.
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: The error encountered while recording the vote.
+          schema:
+            $ref: "#/definitions/Error"
+      tags:
+        - Recipe
+        - Login Required
   /recipes:
     get:
       summary: Get a list of recommended recipes for the user 
@@ -225,16 +273,15 @@ paths:
             type: array
             schema:
               $ref: "#/definitions/Recipe"
+        401:
+          description: No user is logged in.
+          schema:
+            $ref: '#/definitions/Error'
         500:
           description: The error encountered while trying to fetch recipes.
           schema:
             $ref: "#/definitions/Error"
       parameters:
-        - name: user_id
-          in: query
-          required: true
-          type: integer
-          description: The user who will be voting on the recipes.
         - name: group_id
           in: query
           required: true
@@ -249,44 +296,8 @@ paths:
             provided.
       tags:
         - Recipe
-  /vote:
-    post:
-      summary: Register a vote for a given recipe.
-      description: |
-        Specify the user's vote for a given recipe. This is recorded and special
-        feedback is provided when all members of the vote have voted positively
-        for a single recipe.
-      parameters:
-        - name: recipe_id
-          in: query
-          type: integer
-          required: true
-          description: The ID of the recipe being voted on.
-        - name: user_id
-          in: query
-          type: integer
-          required: true
-          description: The user doing the voting.
-        - name: group_id
-          in: query
-          type: integer
-          required: true
-          description: The group that the user is placing the vote in.
-        - name: vote
-          in: query
-          type: boolean
-          required: true
-          description: TRUE if approved, FALSE if rejected. 
-      responses:
-        200:
-          description: The vote was successfully recorded.
-        500:
-          description: The error encountered while recording the vote.
-          schema:
-            $ref: "#/definitions/Error"
-      tags:
-        - Recipe
-  
+        - Login Required
+
 definitions:
   
   User:
@@ -317,6 +328,10 @@ definitions:
         type: string
         description: |
           The visible name of the group.
+      members:
+        type: array
+        items:
+          $ref: '#/definitions/User'
   
   Meal:
     properties:
@@ -327,14 +342,13 @@ definitions:
         type: integer
         description: The group that the meal was chosen for.
       recipe:
-        schema:
-          $ref: "#/definitions/Recipe"
+        $ref: "#/definitions/Recipe"
         description: |
           The chosen recipe, if available.
       votes:
         type: array
         items:
-          $ref: "#/definitions/Vote"
+          $ref: '#/definitions/Vote'
   
   Recipe:
     properties:
@@ -400,3 +414,6 @@ definitions:
       vote:
         type: boolean
         description: TRUE for accept, FALSE for reject
+      available:
+        type: boolean
+        description: TRUE if answer is expected, FALSE if not
