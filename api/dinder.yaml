@@ -6,12 +6,12 @@ info:
   description: Tinder for dinner
   version: "0.1.0"
 # the domain of the service
-host: api.dinder.us
+host: localhost:13033
 # array of all schemes that your API supports
 schemes:
-  - https
+  - http
 # will be prefixed to all paths
-basePath: /v1
+basePath: /api
 produces:
   - application/json
 paths:
@@ -47,7 +47,7 @@ paths:
         place on the client side via a third-party authentication service
         so this call is not intended to handle authentication itself.
       parameters:
-        - name: email
+        - name: email_address
           in: body
           description: |
             The email address of the user, which should already be registered
@@ -140,7 +140,7 @@ paths:
       description: |
         Add the specified user to the specified group.
       parameters:
-        - name: user_email
+        - name: email_address
           in: body
           schema:
             type: string
