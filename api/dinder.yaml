@@ -177,7 +177,7 @@ paths:
         - Meal
         - Login Required
       parameters:
-        - name: group_id
+        - name: group
           in: query
           type: integer
           required: true
