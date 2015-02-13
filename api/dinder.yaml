@@ -237,10 +237,25 @@ paths:
       parameters:
         - name: vote
           in: body
+          required: true
           description: |
             Information about the vote being cast. The user_id will be ignored.
           schema:
             $ref: '#/definitions/Vote'
+        - name: recipe
+          in: body
+          required: true
+          description: |
+            The recipe ID that the vote should be attributed to.
+          schema:
+            type: integer
+        - name: group
+          in: body
+          required: true
+          description: |
+            The group ID that the vote should be attributed to.
+          schema:
+            type: integer    
       responses:
         200:
           description: The vote was successfully recorded.
